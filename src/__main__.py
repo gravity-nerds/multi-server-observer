@@ -112,8 +112,6 @@ def main():
 
     with open("servers.json") as config:
 
-        print(f"Loading {json.load(config).items()} servers.")
-
         for server_address, settings in json.load(config).items():
 
             settings["address"] = server_address
