@@ -1,1 +1,6 @@
-{}
+{
+    "globecraft.eu": {
+        "use_dynmap": true,
+        "dynmap": "https://dynmap.globecraft.eu/"
+    }
+}

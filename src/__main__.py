@@ -65,6 +65,9 @@ class Server(threading.Thread):
                 self.playercount[time.time()] = len(player_accounts)
                 self._last_playercount_timestamp = time.time()
 
+                with open("./store/playercount.log", "a") as f:
+                    f.write(str(len(player_accounts)) + "\n")
+
             joined = [account for account in player_accounts if not account in self.dynmap_players_last]
             left = [account for account in self.dynmap_players_last if not account in player_accounts]
 
@@ -76,13 +79,14 @@ class Server(threading.Thread):
                 try:
                     with open(f"./store/{account}.player") as f:
                         data = json.load(f)
-                        print(data)
                 except FileNotFoundError:
                     data = {
                         "account": account,
                         "playtime": 0,
                         "session_count": 0
                     }
+
+                data["session_count"] += 1
 
                 self.player_cache[account] = data
 
@@ -93,7 +97,10 @@ class Server(threading.Thread):
 
                 playtime = time.time() - self.join_cache[account]
 
-                self.player_cache[account].playtime += playtime
+                self.player_cache[account]["playtime"] += playtime
+
+                with open(f"./store/{account}.player", "w") as f:
+                    f.write(json.dumps(self.player_cache[account]))
 
                 del self.player_cache[account]
                 del self.join_cache[account]
@@ -134,6 +141,13 @@ def main():
 
         if command == "stop":
             exit(0)
+        elif command == "help":
+            print("help - shows this message")
+            print("stop - kills the process")
+            print("servers - shows all loaded servers")
+            print("threads - display all utilised threads")
+            print("online <server> - get data for the online players on a server")
+            print("logs <server> - get the logs for an individual server")
         elif command == "servers":
             print("".join(servers.keys()))
         elif command == "threads":
@@ -156,7 +170,7 @@ def main():
 
                 print("".join([line + "\n" for line in logs[-10:]]))
         else:
-            print("unrecognised")
+            print("unrecognised command")
             
 
 if __name__ == "__main__":
