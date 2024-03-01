@@ -211,7 +211,7 @@ def main():
     print(f"Currently tracking {len(servers)} servers!")
     print("(" + "".join([server + ", " for server in servers.keys()]) + ")\n")
     while True:
-        inp = input("> ")
+        inp = input("\u001b[37m> ")
 
         split = inp.split(" ")
 
@@ -220,24 +220,24 @@ def main():
         if command == "stop":
             exit(0)
         elif command == "help":
-            print("help - shows this message")
-            print("stop - kills the process")
-            print("servers - shows all loaded servers")
-            print("threads - display all utilised threads")
-            print("online <server> - get data for the online players on a server")
-            print("logs <server> - get the logs for an individual server")
+            print(" help - shows this message")
+            print(" stop - kills the process")
+            print(" servers - shows all loaded servers")
+            print(" threads - display all utilised threads")
+            print(" online <server> - get data for the online players on a server")
+            print(" logs <server> - get the logs for an individual server")
         elif command == "servers":
             print("".join([server + "\n" for server in servers.keys()]))
         elif command == "threads":
             print("".join([str(server) + "\n" for server in servers.values()]))
         elif command == "online":
             if len(args) == 0:
-                print("online <server>")
+                print("\u001b[31m online <server>")
                 continue
             if args[0] in servers:
                 player_cache = servers[args[0]].player_cache
                 if len(player_cache) == 0:
-                    print("No one online.")
+                    print("\u001b[32m No one online.")
 
                 for player in player_cache.values():
                     (name, playtime, sessions) = player["account"], player["playtime"], player["session_count"]
@@ -246,17 +246,17 @@ def main():
                         if name in servers[args[0]].uuid_lookup:
                             name = servers[args[0]].uuid_lookup[name]
 
-                    print(f"{name} [{playtime}s #{sessions}]")
+                    print(f"\u001b[32m {name} [{playtime}s #{sessions}]")
         elif command == "logs":
             if len(args) == 0:
-                print("logs <server>")
+                print("\u001b[31m logs <server>")
                 continue
             if args[0] in servers:
                 logs = servers[args[0]].logs
 
-                print("".join([line + "\n" for line in logs[-10:]]))
+                print("".join([" " + line + "\n" for line in logs[-10:]]))
         else:
-            print("unrecognised command")
+            print("\u001b[31m unrecognised command")
             
 
 if __name__ == "__main__":
