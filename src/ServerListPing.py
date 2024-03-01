@@ -54,8 +54,6 @@ def ping(ip, port):
                 raise ValueError("connection aborted")
             
             data += chunk
-    except Exception as e:
-        print("Excpetion: ", e)
     finally:
         sock.close()
     
