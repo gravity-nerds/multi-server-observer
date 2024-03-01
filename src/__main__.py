@@ -210,7 +210,7 @@ def main():
 
     print("\nMulti Server tracker v1.0")
     print(f"Currently tracking {len(servers)} servers!")
-    print("(" + "".join(servers.keys()) + ")\n")
+    print("(" + "".join([server + ", " for server in servers.keys()]) + ")\n")
     while True:
         inp = input("> ")
 
@@ -228,9 +228,9 @@ def main():
             print("online <server> - get data for the online players on a server")
             print("logs <server> - get the logs for an individual server")
         elif command == "servers":
-            print("".join(servers.keys()))
+            print("".join([server + "\n" for server in servers.keys()]))
         elif command == "threads":
-            print("".join([str(server) for server in servers.values()]))
+            print("".join([str(server) + "\n" for server in servers.values()]))
         elif command == "online":
             if len(args) == 0:
                 print("online <server>")

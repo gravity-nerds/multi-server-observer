@@ -1,8 +1,24 @@
 {
     "evo_smp": {
         "use_slp": true,
-        "slp_address": "evolutionsmp.apexmc.co",
+        "slp_address": "51.81.48.104",
         "slp_port": 25582,
+
+        "use_dynmap": false,
+        "dynmap": ""
+    },
+    "localmc": {
+        "use_slp": true,
+        "slp_address": "217.182.183.66",
+        "slp_port": 25567,
+
+        "use_dynmap": false,
+        "dynmap": ""
+    },
+    "evo_test": {
+        "use_slp": true,
+        "slp_address": "86.147.180.117",
+        "slp_port": 25565,
 
         "use_dynmap": false,
         "dynmap": ""

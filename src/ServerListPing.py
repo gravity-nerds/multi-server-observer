@@ -19,9 +19,12 @@ def read_var_int(sock):
 
 def ping(ip, port):
     sock = socket.socket()
-    sock.connect((ip, port))
+
+    data = None
 
     try:
+        sock.connect((ip, port))
+        
         host = ip.encode("utf-8")
 
         data = b""
@@ -51,8 +54,14 @@ def ping(ip, port):
                 raise ValueError("connection aborted")
             
             data += chunk
-
-        return True, json.loads(data)
+    except Exception as e:
+        print("Excpetion: ", e)
     finally:
         sock.close()
-        return False, None
+    
+    if data != None:
+        return True, json.loads(data)
+    return False, None
+
+if __name__ == "__main__":
+    print(ping("192.168.1.72", 25565))
