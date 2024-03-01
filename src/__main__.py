@@ -6,7 +6,6 @@ import json
 import os
 
 servers = {}
-
 class Server(threading.Thread):
     def __init__(self, settings):
         threading.Thread.__init__(self)
@@ -241,7 +240,13 @@ def main():
                     print("No one online.")
 
                 for player in player_cache.values():
-                    print(player)
+                    (name, playtime, sessions) = player["account"], player["playtime"], player["session_count"]
+
+                    if len(name) == 36:
+                        if name in servers[args[0]].uuid_lookup:
+                            name = servers[args[0]].uuid_lookup[name]
+
+                    print(f"{name} [{playtime}s #{sessions}]")
         elif command == "logs":
             if len(args) == 0:
                 print("logs <server>")
