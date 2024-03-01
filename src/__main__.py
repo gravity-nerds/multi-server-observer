@@ -1,7 +1,8 @@
+import ServerListPing
+import threading
 import requests
 import time
 import json
-import threading
 import os
 
 servers = {}
@@ -10,14 +11,25 @@ class Server(threading.Thread):
     def __init__(self, settings):
         threading.Thread.__init__(self)
 
+        assert settings["use_dynmap"] != settings["use_slp"], "You must use one ping method only"
+
         self.player_cache = {}
         self.playercount = {}
-        self.dynmap_players_last = []
+        self.player_accounts_last = []
         self.join_cache = {}
         self.logs = []
-        self.address = settings["address"]
+        self.name = settings["name"]
+        
+        self.default_world = None
+        self.slp_address = None
+        self.slp_port = None
+
+        self.uuid_lookup = {}
 
         self._last_playercount_timestamp = 0
+
+        if not os.path.exists(f"./store/{self.name}/"):
+            os.mkdir(f"./store/{self.name}/")
 
         if settings["use_dynmap"]:
             self.dynmap_url = settings["dynmap"]
@@ -32,6 +44,10 @@ class Server(threading.Thread):
             self.default_world = dynmap_config["defaultworld"]
 
             self.worlds = [world["title"] for world in dynmap_config["worlds"]]
+
+        elif settings["use_slp"]:
+            self.slp_address = settings["slp_address"]
+            self.slp_port = settings["slp_port"]
 
     def load_data(self):
         pass
@@ -48,13 +64,19 @@ class Server(threading.Thread):
             self.cycle()
             time.sleep(1)
 
+    def addLog(self, line):
+        with open(f"./store/{self.name}/main.log", "a") as f:
+            f.write(f"[{time.asctime()}] {line}\n")
+
+
+        self.logs.append(f"[{time.asctime()}] [{self.name}] {line}")
 
     def cycle(self, first=False):
 
         if first:
-            self.logs.append(f"[{self.address}] Thread opened")
+            self.addLog(f"Thread opened")
 
-        if self.default_world:
+        if self.default_world != None:
             request = requests.get(self.dynmap_url + f"up/{self.default_world}/{self.worlds[0]}/0")
 
             decoded = json.loads(request.text)
@@ -65,19 +87,19 @@ class Server(threading.Thread):
                 self.playercount[time.time()] = len(player_accounts)
                 self._last_playercount_timestamp = time.time()
 
-                with open("./store/playercount.log", "a") as f:
+                with open(f"./store/{self.name}/playercount.log", "a") as f:
                     f.write(str(len(player_accounts)) + "\n")
 
-            joined = [account for account in player_accounts if not account in self.dynmap_players_last]
-            left = [account for account in self.dynmap_players_last if not account in player_accounts]
+            joined = [account for account in player_accounts if not account in self.player_accounts_last]
+            left = [account for account in self.player_accounts_last if not account in player_accounts]
 
             for account in joined:
                 if not first:
-                    self.logs.append(f"{account} joined the game")
+                    self.addLog(f"{account} joined the game")
                 self.join_cache[account] = time.time()
                 
                 try:
-                    with open(f"./store/{account}.player") as f:
+                    with open(f"./store/{self.name}/{account}.player") as f:
                         data = json.load(f)
                 except FileNotFoundError:
                     data = {
@@ -93,24 +115,81 @@ class Server(threading.Thread):
                 
             for account in left:
                 if not first:
-                    self.logs.append(f"{account} left the game")
+                    self.addLog(f"{account} left the game")
 
                 playtime = time.time() - self.join_cache[account]
 
                 self.player_cache[account]["playtime"] += playtime
 
-                with open(f"./store/{account}.player", "w") as f:
+                with open(f"./store/{self.name}/{account}.player", "w") as f:
                     f.write(json.dumps(self.player_cache[account]))
 
                 del self.player_cache[account]
                 del self.join_cache[account]
+
+            self.player_accounts_last = player_accounts
+        elif self.slp_address != None and self.slp_port != None:
+            success, server_data = ServerListPing.ping(self.slp_address, self.slp_port)
+
+            if not success:
+                return
+
+            player_accounts = []
+
+            if "sample" in server_data["players"]:
+                player_accounts = []
+                for player in server_data["players"]["sample"]:
+                    player_accounts.append(player["id"])
+                    self.uuid_lookup[player["id"]] = player["name"]
+
+            if self._last_playercount_timestamp + 30 < time.time():
+                self.playercount[time.time()] = len(player_accounts)
+                self._last_playercount_timestamp = time.time()
+
+                with open(f"./store/{self.name}/playercount.log", "a") as f:
+                    f.write(str(len(player_accounts)) + "\n")
+
+            joined = [account for account in player_accounts if not account in self.player_accounts_last]
+            left = [account for account in self.player_accounts_last if not account in player_accounts]
+
+            self.player_accounts_last = player_accounts
+
+            for account in joined:
+                if not first:
+                    self.addLog(f"{self.uuid_lookup[account] if account in self.uuid_lookup else account} joined the game")
+                self.join_cache[account] = time.time()
                 
+                try:
+                    with open(f"./store/{self.name}/{account}.player") as f:
+                        data = json.load(f)
+                except FileNotFoundError:
+                    data = {
+                        "account": account,
+                        "playtime": 0,
+                        "session_count": 0
+                    }
 
+                data["session_count"] += 1
 
-            self.dynmap_players_last = player_accounts
+                self.player_cache[account] = data
+
+                
+            for account in left:
+                if not first:
+                    self.addLog(f"{self.uuid_lookup[account] if account in self.uuid_lookup else account} left the game")
+
+                playtime = time.time() - self.join_cache[account]
+
+                self.player_cache[account]["playtime"] += playtime
+
+                with open(f"./store/{self.name}/{account}.player", "w") as f:
+                    f.write(json.dumps(self.player_cache[account]))
+
+                del self.player_cache[account]
+                del self.join_cache[account]
         
         if first:
-            self.logs.append(f"[{self.address}] {len(self.player_cache)} players online.")
+            self.addLog(f"{len(self.player_cache)} players online.")
 
 def main():
 
@@ -119,15 +198,15 @@ def main():
 
     with open("servers.json") as config:
 
-        for server_address, settings in json.load(config).items():
+        for server_name, settings in json.load(config).items():
 
-            settings["address"] = server_address
+            settings["name"] = server_name
 
             server = Server(settings)
             server.daemon = True
             server.start()
 
-            servers[server_address] = server
+            servers[server_name] = server
 
     print("\nMulti Server tracker v1.0")
     print(f"Currently tracking {len(servers)} servers!")
@@ -158,6 +237,8 @@ def main():
                 continue
             if args[0] in servers:
                 player_cache = servers[args[0]].player_cache
+                if len(player_cache) == 0:
+                    print("No one online.")
 
                 for player in player_cache.values():
                     print(player)

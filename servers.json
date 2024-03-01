@@ -1,6 +1,10 @@
 {
-    "globecraft.eu": {
-        "use_dynmap": true,
-        "dynmap": "https://dynmap.globecraft.eu/"
+    "evo_smp": {
+        "use_slp": true,
+        "slp_address": "evolutionsmp.apexmc.co",
+        "slp_port": 25582,
+
+        "use_dynmap": false,
+        "dynmap": ""
     }
 }
