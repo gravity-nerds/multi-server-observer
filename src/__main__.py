@@ -27,6 +27,7 @@ class Server(threading.Thread):
         self.uuid_lookup = {}
 
         self._last_playercount_timestamp = 0
+        self.server_up = False
 
         if not os.path.exists(f"./store/{self.name}/"):
             os.mkdir(f"./store/{self.name}/")
@@ -90,12 +91,16 @@ class Server(threading.Thread):
         if first:
             self.addLog(f"Thread opened")
 
+        up = False
+
         if self.default_world != None:
             request = requests.get(self.dynmap_url + f"up/{self.default_world}/{self.worlds[0]}/0")
 
             decoded = json.loads(request.text)
 
             player_accounts = [player["account"] for player in decoded["players"]]
+
+            up = True
 
             if self._last_playercount_timestamp + 30 < time.time():
                 self.playercount[time.time()] = len(player_accounts)
@@ -145,7 +150,9 @@ class Server(threading.Thread):
         elif self.slp_address != None and self.slp_port != None:
             success, server_data = ServerListPing.ping(self.slp_address, self.slp_port)
 
-            if not success:
+            if success:
+                up = True
+            else:
                 return
 
             player_accounts = []
@@ -201,9 +208,19 @@ class Server(threading.Thread):
 
                 del self.player_cache[account]
                 del self.join_cache[account]
-        
+
+        if up != self.server_up:
+            if not first:
+                if up == True:
+                    self.addLog("Server Opened")
+                else:
+                    self.addLog("Server Closed")
+
+            self.server_up = up
+
         if first:
             self.addLog(f"{len(self.player_cache)} players online.")
+            
 
 def main():
 
