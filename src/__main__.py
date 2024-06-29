@@ -18,6 +18,7 @@ class Server(threading.Thread):
         self.join_cache = {}
         self.logs = []
         self.name = settings["name"]
+        self.settings = settings
         
         self.default_world = None
         self.slp_address = None
@@ -48,6 +49,10 @@ class Server(threading.Thread):
             self.slp_address = settings["slp_address"]
             self.slp_port = settings["slp_port"]
 
+        self.webhook = None
+        if settings["webhook"] != "":
+            self.webhook = settings["webhook"]
+
     def load_data(self):
         pass
 
@@ -69,6 +74,16 @@ class Server(threading.Thread):
 
 
         self.logs.append(f"[{time.asctime()}] [{self.name}] {line}")
+
+        if self.webhook:
+            response = requests.post(self.webhook, json.dumps({
+                "content": line,
+                "username": "Satelite",
+                "avatar_url": "https://cdn.discordapp.com/avatars/1219692243196051617/f118cfe014c37b062c9283d6cb475664.webp?size=256",
+            }), headers={
+                "Content-Type": "application/json"
+            })
+
 
     def cycle(self, first=False):
 
@@ -252,9 +267,33 @@ def main():
                 print("\u001b[31m logs <server>")
                 continue
             if args[0] in servers:
-                logs = servers[args[0]].logs
+                meta = servers[args[0]].logs
 
-                print("".join([" " + line + "\n" for line in logs[-10:]]))
+                print("".join([" " + line + "\n" for line in meta[-10:]]))
+        elif command == "meta":
+            if len(args) == 0:
+                print("\u001b[31m meta <server>")
+                continue
+            if args[0] in servers:
+                meta = servers[args[0]].settings
+
+                print(json.dumps(meta, indent=4))
+        elif command == "live":
+            if len(args) == 0:
+                print("\u001b[31m live <server>")
+                continue
+            if args[0] in servers:
+                last = ""
+                while True:
+                    meta = servers[args[0]].logs
+
+                    c = meta[-1][27:]
+
+                    if c != last:
+                        print(c)
+                    last = c
+                    time.sleep(0.1)
+                    
         else:
             print("\u001b[31m unrecognised command")
             
